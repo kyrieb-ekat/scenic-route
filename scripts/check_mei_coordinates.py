@@ -2,7 +2,7 @@ import xml.etree.ElementTree as ET  # Import ElementTree
 
 
 # Reload the updated MEI file
-tree = ET.parse("/mnt/data/updated_output.mei")
+tree = ET.parse("/Users/ekaterina/miyao_why/output_mei/checked_mei/adapted_output1.mei")
 root = tree.getroot()
 
 # MEI namespace
@@ -37,6 +37,6 @@ else:
     raise ValueError("No <layer> element found in the MEI file.")
 
 # Save the new enriched MEI file
-final_mei_path = "/Users/ekaterina/miyao_why/output_mei/final_enriched_output.mei"
+final_mei_path = "/Users/ekaterina/miyao_why/output_mei/"
 # The final MEI file path is stored in final_mei_path
 final_mei_path

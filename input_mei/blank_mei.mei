@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mei xmlns="http://www.music-encoding.org/ns/mei" meiversion="4.0.0">
+  <meiHead>
+    <fileDesc>
+      <titleStmt>
+        <title>Untitled MEI Document</title>
+      </titleStmt>
+      <pubStmt>
+        <date>2024</date>
+      </pubStmt>
+    </fileDesc>
+  </meiHead>
+  <music>
+    <body>
+      <mdiv>
+        <score>
+          <scoreDef>
+            <staffGrp>
+              <!-- Staff definitions will be added by the script -->
+            </staffGrp>
+          </scoreDef>
+          <section>
+            <!-- Staff elements will be added by the script -->
+            <staff>
+              <layer>
+                <!-- Musical content will be added by the script -->
+              </layer>
+            </staff>
+          </section>
+        </score>
+      </mdiv>
+    </body>
+  </music>
+</mei>
