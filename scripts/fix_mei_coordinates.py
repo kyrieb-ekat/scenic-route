@@ -451,6 +451,131 @@ def add_missing_sb_elements(mei_file_path: str, output_file_path: str) -> None:
     except Exception as e:
         print(f"Error adding missing SB elements: {e}")
 
+def restructure_mei_staves(mei_file_path: str, jsomr_file_path: str, output_file_path: str) -> None:
+    """
+    Restructure an MEI file to have multiple staff elements based on system breaks.
+    
+    This function takes an MEI file that has all elements in a single staff and
+    redistributes them across multiple staff elements based on the system breaks.
+    This ensures each staff in the source manuscript gets its own representation
+    in the MEI file.
+    
+    Args:
+        mei_file_path: Path to the MEI file
+        jsomr_file_path: Path to the JSOMR file
+        output_file_path: Path to save the restructured MEI file
+    """
+    try:
+        # Load the MEI file
+        mei_tree = ET.parse(mei_file_path)
+        mei_root = mei_tree.getroot()
+        
+        # Load the JSOMR file for staff information
+        with open(jsomr_file_path, 'r') as f:
+            jsomr_data = json.load(f)
+        
+        # Get the number of staves from the JSOMR file
+        num_staves = len(jsomr_data.get("staves", []))
+        print(f"Found {num_staves} staves in JSOMR file")
+        
+        # Find the section element
+        section = mei_root.find(".//mei:section", MEI_NS)
+        if section is None:
+            print("Error: Could not find section element")
+            return
+        
+        # Get the original staff and its layer
+        original_staff = section.find(".//mei:staff", MEI_NS)
+        if original_staff is None:
+            print("Error: Could not find staff element")
+            return
+        
+        original_layer = original_staff.find(".//mei:layer", MEI_NS)
+        if original_layer is None:
+            print("Error: Could not find layer element")
+            return
+        
+        # Get all elements from the original layer
+        layer_elements = list(original_layer)
+        
+        # Group elements by staff (based on sb elements with n attribute)
+        staff_elements = {}
+        current_staff = "1"
+        
+        for element in layer_elements:
+            if element.tag == "{http://www.music-encoding.org/ns/mei}sb":
+                current_staff = element.get("n", "1")
+            
+            # Initialize the staff list if needed
+            if current_staff not in staff_elements:
+                staff_elements[current_staff] = []
+            
+            # Clone the element to avoid reference issues
+            element_copy = ET.Element(element.tag, element.attrib)
+            for child in element:
+                child_copy = ET.Element(child.tag, child.attrib)
+                element_copy.append(child_copy)
+            
+            # Add to the current staff's elements
+            staff_elements[current_staff].append(element_copy)
+        
+        # Remove the original staff from the section
+        section.remove(original_staff)
+        
+        # Update the staff definition count to match number of staves
+        staff_def = mei_root.find(".//mei:staffDef", MEI_NS)
+        if staff_def is not None:
+            # Create a staffGrp if it doesn't exist
+            staff_grp = mei_root.find(".//mei:staffGrp", MEI_NS)
+            if staff_grp is not None:
+                # Remove the original staffDef
+                staff_grp.remove(staff_def)
+                
+                # Add new staffDef elements for each staff
+                for i in range(1, num_staves + 1):
+                    new_staff_def = ET.SubElement(staff_grp, "{http://www.music-encoding.org/ns/mei}staffDef")
+                    new_staff_def.set("n", str(i))
+                    new_staff_def.set("lines", "4")
+                    new_staff_def.set("notationtype", "neume")
+                    new_staff_def.set("clef.line", "4")
+                    new_staff_def.set("clef.shape", "C")
+                    new_staff_def.set("xml:id", f"m-staffdef-{i}")
+        
+        # Create new staff elements for each staff
+        for staff_num in sorted(staff_elements.keys(), key=int):
+            # Skip staffs with no elements
+            if not staff_elements[staff_num]:
+                continue
+                
+            # Create new staff and layer
+            new_staff = ET.SubElement(section, "{http://www.music-encoding.org/ns/mei}staff")
+            new_staff.set("n", staff_num)
+            new_staff.set("xml:id", f"m-staff-{staff_num}")
+            
+            new_layer = ET.SubElement(new_staff, "{http://www.music-encoding.org/ns/mei}layer")
+            new_layer.set("xml:id", f"m-layer-{staff_num}")
+            
+            # Add page break to first staff if it exists
+            if staff_num == "1":
+                pb = mei_root.find(".//mei:pb", MEI_NS)
+                if pb is not None:
+                    # Clone the pb element
+                    pb_copy = ET.Element(pb.tag, pb.attrib)
+                    new_layer.append(pb_copy)
+            
+            # Add elements to the new layer
+            for element in staff_elements[staff_num]:
+                new_layer.append(element)
+        
+        # Save the restructured MEI file
+        mei_tree.write(output_file_path, encoding="utf-8", xml_declaration=True)
+        print(f"Restructured MEI file saved to {output_file_path}")
+        
+    except Exception as e:
+        print(f"Error restructuring MEI staves: {e}")
+        import traceback
+        traceback.print_exc()
+
 def main():
     """Main function to run the MEI coordinate fixing script."""
     import argparse
@@ -464,6 +589,7 @@ def main():
     parser.add_argument("--add-missing", action="store_true", help="Add missing system break elements")
     parser.add_argument("--add-clefs", action="store_true", help="Add clef elements from JSOMR data")
     parser.add_argument("--skip-fix", action="store_true", help="Skip fixing coordinates")
+    parser.add_argument("--restructure", action="store_true", help="Restructure MEI to have multiple staves")
     
     args = parser.parse_args()
     
@@ -476,33 +602,48 @@ def main():
     
     # Modification functions
     temp_file = args.output + ".temp"
+    temp_file2 = args.output + ".temp2"
     current_file = args.mei
     
     # Fix coordinates if not skipped
-    if not args.skip_fix and not any([args.analyze, args.find_missing, args.add_missing, args.add_clefs]):
-        fix_mei_coordinates(current_file, args.jsomr, args.output)
-        current_file = args.output
+    if not args.skip_fix and not any([args.analyze, args.find_missing, args.add_missing, args.add_clefs, args.restructure]):
+        fix_mei_coordinates(current_file, args.jsomr, temp_file)
+        current_file = temp_file
     
     # Add missing system breaks if requested
     if args.add_missing:
-        add_missing_sb_elements(current_file, temp_file)
-        current_file = temp_file
+        add_missing_sb_elements(current_file, temp_file2)
+        current_file = temp_file2
     
     # Add clef elements if requested
     if args.add_clefs:
-        add_clef_elements(current_file, args.jsomr, args.output)
+        add_clef_elements(current_file, args.jsomr, temp_file)
+        current_file = temp_file
     
-    # Clean up temporary file if it exists
-    if os.path.exists(temp_file):
-        os.remove(temp_file)
+    # Restructure MEI staves if requested
+    if args.restructure:
+        restructure_mei_staves(current_file, args.jsomr, args.output)
     
-    # If no specific actions were requested, do coordinate fixing and add clefs
-    if not any([args.analyze, args.find_missing, args.add_missing, args.add_clefs, args.skip_fix]):
+    # Clean up temporary files
+    for file in [temp_file, temp_file2]:
+        if os.path.exists(file):
+            os.remove(file)
+    
+    # If no specific actions were requested, do the complete workflow
+    if not any([args.analyze, args.find_missing, args.add_missing, args.add_clefs, args.skip_fix, args.restructure]):
+        # Step 1: Fix coordinates
         fix_mei_coordinates(args.mei, args.jsomr, temp_file)
-        add_clef_elements(temp_file, args.jsomr, args.output)
-        # Clean up temporary file
-        if os.path.exists(temp_file):
-            os.remove(temp_file)
+        
+        # Step 2: Add clef elements
+        add_clef_elements(temp_file, args.jsomr, temp_file2)
+        
+        # Step 3: Restructure the MEI file to have multiple staves
+        restructure_mei_staves(temp_file2, args.jsomr, args.output)
+        
+        # Clean up temporary files
+        for file in [temp_file, temp_file2]:
+            if os.path.exists(file):
+                os.remove(file)
 
 if __name__ == "__main__":
     main()
