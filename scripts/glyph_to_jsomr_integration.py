@@ -11,8 +11,9 @@ import json
 import xml.etree.ElementTree as ET
 import re
 import os
-import numpy as np
 from typing import Dict, List, Tuple, Optional, Any
+import numpy as np
+
 
 def parse_gamera_xml(xml_file_path: str) -> List[Dict[str, Any]]:
     """
@@ -24,10 +25,15 @@ def parse_gamera_xml(xml_file_path: str) -> List[Dict[str, Any]]:
     Returns:
         List of dictionaries containing glyph information
     """
+    #uncomment the below direct file path if do not want to use command line interface
+    #xml_file_path = "/Users/ekaterina/miyao_why/reference_files/NIC XML Glyphs - test file.xml"
+    #this is the placeholder experimental path for xml glyphs. There are confirmed at least 
+    #ten c-clefs detected and extracted from this page. 
+
     try:
         tree = ET.parse(xml_file_path)
         root = tree.getroot()
-        
+      
         glyphs = []
         
         # Find all glyph elements in the XML
@@ -155,7 +161,7 @@ def estimate_pitch_from_position(glyph: Dict[str, Any], staff: Dict[str, Any]) -
     # This is a placeholder - in a real implementation, you would extract 
     # clef information from the staff or nearby clef glyphs
     base_note = "c"  # Default base note
-    base_octave = 4   # Default base octave
+    base_octave = 2   # Default base octave
     
     # Scale degrees for the traditional medieval scale (adjust as needed)
     scale_degrees = ["c", "d", "e", "f", "g", "a", "b"]
@@ -245,9 +251,14 @@ def integrate_glyphs_with_jsomr(jsomr_file_path: str, xml_file_path: str, output
         xml_file_path: Path to the XML file with glyph information
         output_file_path: Path to save the integrated JSOMR file
     """
+    #if not wanting to use a command line interface, ucomment these direct item lines
+    #jsomr_file_path = "/Users/ekaterina/miyao_why/reference_files/output_interpolated_lines.jsomr17_copy.json"  
+    #xml_file_path = "/Users/ekaterina/miyao_why/reference_files/NIC XML Glyphs - test file.xml"
+    #output_file_path = "/Users/ekaterina/miyao_why/output_jsomr"
+
     try:
         # Load the JSOMR file
-        with open(jsomr_file_path, 'r') as f:
+        with open(jsomr_file_path, 'r', encoding='utf-8') as f:
             jsomr_data = json.load(f)
         
         # Extract staff information
@@ -266,7 +277,7 @@ def integrate_glyphs_with_jsomr(jsomr_file_path: str, xml_file_path: str, output
         jsomr_data["glyphs"] = updated_glyphs
         
         # Save the updated JSOMR file
-        with open(output_file_path, 'w') as f:
+        with open(output_file_path, 'w', encoding='utf-8') as f:
             json.dump(jsomr_data, f, indent=2)
             
         print(f"Successfully integrated glyphs and saved to {output_file_path}")
