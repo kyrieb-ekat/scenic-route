@@ -3,9 +3,9 @@ import json
 import xml.etree.ElementTree as ET
 
 # Define your file paths
-mei_input_path = "/Users/ekaterina/miyao_why/output_mei/checked_mei/checked_integrated_mei1.mei"
-jsomr_path = "/Users/ekaterina/miyao_why/output_jsomr/integrated_jsomr/integrated_jsomr1.json"
-output_dir = "/Users/ekaterina/miyao_why/output_mei/checked_mei/"
+mei_input_path = "/Users/kyriebouressa/documents/scenic-route/reference_files/rodan-produced-mei/MEI-handmade17-thru-HPF.mei"
+jsomr_path = "/Users/kyriebouressa/documents/scenic-route/output_jsomr/output_interpolated_lines.jsomr17.json"
+output_dir = "/Users/kyriebouressa/documents/scenic-route/output_mei/checked_mei/"
 
 # Determine next available output number
 existing_files = [f for f in os.listdir(output_dir) if f.startswith("checked_integrated_mei") and f.endswith(".mei")]
